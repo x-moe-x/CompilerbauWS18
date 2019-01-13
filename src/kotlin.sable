@@ -3,6 +3,11 @@ Package kotlin;
 Helpers
 	letter	= [['a' .. 'z'] + ['A' .. 'Z']];
 	digit	= ['0' .. '9'];
+	lf  	= 10;
+	cr  	= 13;
+	sp		= ' ';
+
+	line_terminator = lf | cr | cr lf;
 
 Tokens
 	// keywords
@@ -13,20 +18,20 @@ Tokens
 	l_par = '(';
 	r_brc = '}';
 	r_par = ')';
-	colon = ':';
+	col = ':';
 
 	// operators
 	gt = '>';
 	lt = '<';
 
 	// identifier
-	identifier = letter (letter|digit)*;
+	id = letter (letter|digit)*;
 
 	// white spaces
-	white_space = ' ';
+	white_space = (sp | line_terminator)*;
 
 Ignored Tokens
 	white_space;
 
 Productions
-     function = fun [fun_name]: identifier l_par [var_name]: identifier colon [var_type]: identifier gt [var_param]: identifier lt r_par l_brc r_brc;
+     function = fun [fun_name]: id l_par [var_name]: id col [var_type]: id lt [var_param]: id gt r_par l_brc r_brc;
