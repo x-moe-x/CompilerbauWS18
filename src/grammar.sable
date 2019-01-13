@@ -1,0 +1,15 @@
+Package calculator;
+
+Helpers
+	digit = ['0' .. '9'];
+	add = '+';
+	sub = '-';
+	div = '/';
+	multi = '*';
+
+Tokens
+	integer = digit +;
+	operation = add |  sub  div |  multi;
+
+Productions
+	program = [left]: integer operation [right]: integer;
