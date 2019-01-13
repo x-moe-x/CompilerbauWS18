@@ -1,1 +1,8 @@
+# ide specific
 .idea/
+
+# sable specific
+src/calculator/analysis/
+src/calculator/lexer/
+src/calculator/node/
+src/calculator/parser/
