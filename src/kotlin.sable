@@ -1,0 +1,32 @@
+Package kotlin;
+
+Helpers
+	letter	= [['a' .. 'z'] + ['A' .. 'Z']];
+	digit	= ['0' .. '9'];
+
+Tokens
+	// keywords
+	fun	= 'fun';
+
+	// separators
+	l_brc = '{';
+	l_par = '(';
+	r_brc = '}';
+	r_par = ')';
+	colon = ':';
+
+	// operators
+	gt = '>';
+	lt = '<';
+
+	// identifier
+	identifier = letter (letter|digit)*;
+
+	// white spaces
+	white_space = ' ';
+
+Ignored Tokens
+	white_space;
+
+Productions
+     function = fun [fun_name]: identifier l_par [var_name]: identifier colon [var_type]: identifier gt [var_param]: identifier lt r_par l_brc r_brc;
