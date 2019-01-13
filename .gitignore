@@ -1,3 +1,9 @@
 # ide specific
 .idea/
 out
+
+# sable specific
+src/kotlin/analysis/
+src/kotlin/lexer/
+src/kotlin/node/
+src/kotlin/parser/
