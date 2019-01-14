@@ -27,7 +27,10 @@ Tokens
 	r_par = ')';
 	l_brc = '{';
 	r_brc = '}';
-	colon	= ':';
+	colon = ':';
+	comma = ',';
+	dot = ',';
+	semi = ';';
 
 	// operators
 	gt = '>';
@@ -41,14 +44,57 @@ Ignored Tokens
 	white_space;
 
 Productions
-     function = fun simple_name function_parameter block;
+	function =
+		fun simple_name value_parameters function_body?;
 
-     function_parameter = l_par parameter r_par;
+	value_parameters =
+		{non_empty} l_par function_parameters r_par |
+		{empty} l_par r_par;
 
-     parameter = simple_name colon simple_user_type;
+	function_parameters =
+		{single} function_parameter |
+		{multiple} function_parameters comma function_parameter;
 
-     simple_user_type = simple_name template_parameter?;
+	function_parameter =
+		parameter;
 
-     template_parameter = lt simple_user_type gt;
+	parameter =
+		simple_name colon type;
 
-     block = l_brc r_brc;
+	type =
+		type_reference;
+
+	type_reference =
+		user_type;
+
+	user_type =
+		simple_user_types;
+
+	simple_user_types =
+		{single} simple_user_type |
+		{multiple} simple_user_types dot simple_user_type;
+
+	simple_user_type =
+		simple_name template_parameters?;
+
+	template_parameters =
+		lt template_parameter gt;
+
+	template_parameter =
+		{single} type |
+		{multiple} template_parameter colon type;
+
+	function_body =
+		block;
+
+	block =
+		l_brc statements r_brc;
+
+	statements =
+		semi* statement_list [semis]:semi*;
+
+	statement_list =
+		{single} statement |
+		{multiple} statement_list semi+ statement;
+
+	statement = gt;
