@@ -131,7 +131,8 @@ Productions
 		property;
 
 	property =
-		var variable_declaration_entry assignment? semi?;
+		//var variable_declaration_entry assignment? semi?;
+		var variable_declaration_entry assignment?;
 
 	variable_declaration_entry =
 		simple_name typing?;
@@ -140,7 +141,8 @@ Productions
 		colon type;
 
 	assignment =
-		assign expression semi?;
+		//assign expression semi?;
+		assign expression;
 
 	expression =
 		disjunction asign_disjunction*;
@@ -151,33 +153,49 @@ Productions
 	assignment_operator =
 		assign;
 
-	disjunction =
-		conjunction or_conjunction*;
+	//disjunction =
+	//	conjunction or_conjunction*;
 
-	or_conjunction =
-		or conjunction;
+	//or_conjunction =
+	//	or conjunction;
+
+	disjunction =
+		{and} conjunction |
+		{or} disjunction or conjunction;
+
+	//conjunction =
+	//	equality_comparison and_equality_comparison*;
+
+	//and_equality_comparison =
+	//	and equality_comparison;
 
 	conjunction =
-		equality_comparison and_equality_comparison*;
+		{equality} equality_comparison |
+		{and} conjunction and equality_comparison;
 
-	and_equality_comparison =
-		and equality_comparison;
+	//equality_comparison =
+	//	comparison eqop_comparison*;
+
+	//eqop_comparison =
+	//	equality_operation comparison;
 
 	equality_comparison =
-		comparison eqop_comparison*;
-
-	eqop_comparison =
-		equality_operation comparison;
+		{comparison} comparison |
+		{equality} equality_comparison equality_operation comparison;
 
 	equality_operation =
 		{not_equal} neq |
 		{equal} eq;
 
-	comparison =
-		named_infix comp_named_infix*;
+	//comparison =
+	//	named_infix comp_named_infix*;
 
-	comp_named_infix =
-		comparison_operation comparison;
+	//comp_named_infix =
+	//	comparison_operation comparison;
+
+	comparison =
+		{named_infix} named_infix |
+		{comparison} comparison comparison_operation named_infix;
 
 	comparison_operation =
 		{lower} lt |
@@ -189,23 +207,36 @@ Productions
 		// shortcut to additive expression, skipping elvis expr and infix function call
 		additive_expression;
 
-	additive_expression =
-		multiplicative_expression adop_multiplicative_expression*;
+	//additive_expression =
+	//	multiplicative_expression adop_multiplicative_expression*;
 
-	adop_multiplicative_expression =
-		additive_operation multiplicative_expression;
+	//adop_multiplicative_expression =
+	//	additive_operation multiplicative_expression;
+
+	additive_expression =
+		{mult} multiplicative_expression |
+		{add} additive_expression additive_operation multiplicative_expression;
 
 	additive_operation =
 		{plus} plus |
 		{minus} minus;
 
-	multiplicative_expression =
-		type_rhs mulop_type_rhs*;
+	//multiplicative_expression =
+	//	type_rhs mulop_type_rhs*;
 
-	mulop_type_rhs =
+	//mulop_type_rhs =
+	//	{mult} mult |
+	//	{div} div |
+	//	{mod} mod;
+
+	multiplicative_expression =
+		{rhs} type_rhs |
+		{mult} multiplicative_expression multiplicative_operation type_rhs;
+
+	multiplicative_operation =
 		{mult} mult |
-		{div} div |
-		{mod} mod;
+    	{div} div |
+    	{mod} mod;
 
 	type_rhs =
 		prefix_unary_expression;
