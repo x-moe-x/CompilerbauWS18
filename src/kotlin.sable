@@ -5,11 +5,19 @@ Helpers
 	digit = '0' | non_zero_digit;
 	digits = digit+;
 
+	letter	= [['a' .. 'z']+['A'..'Z']];
+	java_letter = letter | '$' | '_';
+	java_letter_or_digit = letter | digit | '$' | '_';
+
 Tokens
+	// keywords
+	var = 'var';
+
 	or = '||';
 	and = '&&';
 	neq = '!=';
 	eq = '==';
+	assign = '=';
 	leq = '<=';
 	geq = '>=';
 	lt = '<';
@@ -20,12 +28,26 @@ Tokens
 	slash = '/';
 	percent = '%';
 	not = '!';
+	colon = ':';
+	semi = ';';
 
 	integer_literal = '0' | non_zero_digit digits?;
 	boolean_literal = 'true' | 'false';
 
+	type = 'Int' | 'Boolean';
+
+	identifier = java_letter java_letter_or_digit*;
+
+	white_space = ' ';
+
+Ignored Tokens
+	white_space;
+
 Productions
-	start = or_expression;
+	start = var_declaration;
+
+	var_declaration =
+		var identifier colon type assign or_expression semi;
 
 	or_expression =
 		{and} and_expression |
