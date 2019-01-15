@@ -1,9 +1,22 @@
 Package kotlin;
 
 Helpers
+	all 	= [0..0xffff];
+
 	non_zero_digit = ['1' .. '9'];
 	digit = '0' | non_zero_digit;
 	digits = digit+;
+
+	tab  	= 0x0009;
+	lf  	= 0x000a;
+	cr  	= 0x000d;
+	sp 		= ' ';
+
+	line_terminator = lf | cr | cr lf;
+	input_character = [all - [cr + lf]];
+
+	not_star =    [input_character - '*'] | line_terminator;
+  	not_star_not_slash = [input_character - ['*' + '/']] | line_terminator;
 
 	letter	= [['a' .. 'z']+['A'..'Z']];
 	java_letter = letter | '$' | '_';
@@ -12,7 +25,18 @@ Helpers
 Tokens
 	// keywords
 	var = 'var';
+	fun = 'fun';
 
+	// pseudo keywords from preamble
+	main = 'main';
+	args = 'args';
+	string = 'String';
+	array = 'Array';
+
+	l_par = '(';
+	r_par = ')';
+	l_brc = '{';
+	r_brc = '}';
 	or = '||';
 	and = '&&';
 	neq = '!=';
@@ -38,13 +62,22 @@ Tokens
 
 	identifier = java_letter java_letter_or_digit*;
 
-	white_space = ' ';
+	white_space = (sp | tab | line_terminator)*;
+
+	traditional_comment = '/*' not_star+ '*'+ (not_star_not_slash not_star* '*'+)* '/';
+	end_of_line_comment = '//' input_character* line_terminator?;
 
 Ignored Tokens
-	white_space;
+	white_space,
+	traditional_comment,
+	end_of_line_comment;
 
 Productions
-	start = var_declaration;
+	start =
+		fun main l_par args colon array lt string gt r_par l_brc r_brc;
+
+	assignment =
+		identifier assign or_expression semi;
 
 	var_declaration =
 		var identifier colon type assign or_expression semi;
