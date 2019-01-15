@@ -1,11 +1,11 @@
 package kotlin.interpreter;
 
 import kotlin.analysis.DepthFirstAdapter;
-import kotlin.node.AFunction;
+import kotlin.node.AStart;
 
 public class Interpreter extends DepthFirstAdapter {
 	@Override
-	public void caseAFunction(AFunction node) {
-		super.caseAFunction(node);
+	public void caseAStart(AStart node) {
+		super.caseAStart(node);
 	}
 }

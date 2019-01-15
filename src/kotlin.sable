@@ -1,290 +1,84 @@
 Package kotlin;
 
 Helpers
-	all 	= [0..0xffff];
-
-	letter	= [['a' .. 'z']+['A'..'Z']];
-
-	ht  	= 0x0009;
-	lf  	= 0x000a;
-	ff  	= 0x000c;
-	cr  	= 0x000d;
-	sp 		= ' ';
-
 	non_zero_digit = ['1' .. '9'];
 	digit = '0' | non_zero_digit;
 	digits = digit+;
 
-	line_terminator = lf | cr | cr lf;
-	input_character = [all - [cr + lf]];
-
-	java_letter = letter | '$' | '_';
-	java_letter_or_digit = letter | digit | '$' | '_';
-
 Tokens
-	// keywords
-	fun = 'fun';
-	var = 'var';
-	if = 'if';
-	else = 'else';
-	while = 'while';
-
-	integer_literal = '0' | non_zero_digit digits?;
-
-	// separators
-	l_par = '(';
-	r_par = ')';
-	l_brc = '{';
-	r_brc = '}';
-	l_brk = '[';
-	r_brk = ']';
-	colon = ':';
-	comma = ',';
-	dot = ',';
-	semi = ';';
-
-	// operators
-	leq = '<=';
-	geq = '>=';
-	gt = '>';
-	lt = '<';
-	neq = '!=';
-	assign = '=';
-	eq = '==';
 	or = '||';
 	and = '&&';
+	neq = '!=';
+	eq = '==';
+	leq = '<=';
+	geq = '>=';
+	lt = '<';
+	gt = '>';
 	plus = '+';
 	minus = '-';
-	mult = '*';
-	div = '/';
-	mod = '%';
+	star = '*';
+	slash = '/';
+	percent = '%';
 	not = '!';
 
+	integer_literal = '0' | non_zero_digit digits?;
 	boolean_literal = 'true' | 'false';
 
-	simple_name = java_letter java_letter_or_digit*;
-
-	white_space = (sp | ht | ff | line_terminator)*;
-
-Ignored Tokens
-	white_space;
-
 Productions
-	function =
-		fun simple_name value_parameters function_body?;
+	start = or_expression;
 
-	value_parameters =
-		{non_empty} l_par function_parameters r_par |
-		{empty} l_par r_par;
+	or_expression =
+		{and} and_expression |
+		{or} or_expression or and_expression;
 
-	function_parameters =
-		{single} function_parameter |
-		{multiple} function_parameters comma function_parameter;
+	and_expression =
+		{eq} eq_expression |
+		{and} and_expression and eq_expression;
 
-	function_parameter =
-		parameter;
+	eq_expression =
+		{rel} rel_expression |
+		{eq} eq_expression eq_op rel_expression;
 
-	parameter =
-		simple_name colon type;
+	rel_expression =
+		{add} add_expression |
+		{rel} rel_expression rel_op add_expression;
 
-	type =
-		type_reference;
+	add_expression =
+		{mult} mult_expression |
+		{add} add_expression add_op mult_expression;
 
-	type_reference =
-		user_type;
+	mult_expression =
+		{unary} unary_expression |
+		{mult} mult_expression mult_op unary_expression;
 
-	user_type =
-		simple_user_types;
+	unary_expression =
+		{plain} literal_constant |
+		{unary} unary_op unary_expression;
 
-	simple_user_types =
-		{single} simple_user_type |
-		{multiple} simple_user_types dot simple_user_type;
+	eq_op =
+		{neq} neq |
+		{eq} eq;
 
-	simple_user_type =
-		simple_name template_parameters?;
+	rel_op =
+		{lt} lt |
+		{gt} gt |
+		{leq} leq |
+		{geq} geq;
 
-	template_parameters =
-		lt template_parameter gt;
-
-	template_parameter =
-		{single} type |
-		{multiple} template_parameter colon type;
-
-	function_body =
-		block;
-
-	block =
-		l_brc statements r_brc;
-
-	statements =
-		semi* statement_list [semis]:semi*;
-
-	statement_list =
-		{single} statement |
-		{multiple} statement_list semi+ statement;
-
-	statement =
-		{decl} declaration;
-		//{block_level_expr} block_level_expression;
-
-	declaration =
-		property;
-
-	property =
-		//var variable_declaration_entry assignment? semi?;
-		var variable_declaration_entry assignment?;
-
-	variable_declaration_entry =
-		simple_name typing?;
-
-	typing =
-		colon type;
-
-	assignment =
-		//assign expression semi?;
-		assign expression;
-
-	expression =
-		disjunction asign_disjunction*;
-
-	asign_disjunction =
-		assignment_operator disjunction;
-
-	assignment_operator =
-		assign;
-
-	//disjunction =
-	//	conjunction or_conjunction*;
-
-	//or_conjunction =
-	//	or conjunction;
-
-	disjunction =
-		{and} conjunction |
-		{or} disjunction or conjunction;
-
-	//conjunction =
-	//	equality_comparison and_equality_comparison*;
-
-	//and_equality_comparison =
-	//	and equality_comparison;
-
-	conjunction =
-		{equality} equality_comparison |
-		{and} conjunction and equality_comparison;
-
-	//equality_comparison =
-	//	comparison eqop_comparison*;
-
-	//eqop_comparison =
-	//	equality_operation comparison;
-
-	equality_comparison =
-		{comparison} comparison |
-		{equality} equality_comparison equality_operation comparison;
-
-	equality_operation =
-		{not_equal} neq |
-		{equal} eq;
-
-	//comparison =
-	//	named_infix comp_named_infix*;
-
-	//comp_named_infix =
-	//	comparison_operation comparison;
-
-	comparison =
-		{named_infix} named_infix |
-		{comparison} comparison comparison_operation named_infix;
-
-	comparison_operation =
-		{lower} lt |
-		{greater} gt |
-		{lower_eq} leq |
-		{greater_eq} geq;
-
-	named_infix =
-		// shortcut to additive expression, skipping elvis expr and infix function call
-		additive_expression;
-
-	//additive_expression =
-	//	multiplicative_expression adop_multiplicative_expression*;
-
-	//adop_multiplicative_expression =
-	//	additive_operation multiplicative_expression;
-
-	additive_expression =
-		{mult} multiplicative_expression |
-		{add} additive_expression additive_operation multiplicative_expression;
-
-	additive_operation =
+	add_op =
 		{plus} plus |
 		{minus} minus;
 
-	//multiplicative_expression =
-	//	type_rhs mulop_type_rhs*;
+	mult_op =
+		{mult} star |
+		{div} slash |
+		{mod} percent;
 
-	//mulop_type_rhs =
-	//	{mult} mult |
-	//	{div} div |
-	//	{mod} mod;
-
-	multiplicative_expression =
-		{rhs} type_rhs |
-		{mult} multiplicative_expression multiplicative_operation type_rhs;
-
-	multiplicative_operation =
-		{mult} mult |
-    	{div} div |
-    	{mod} mod;
-
-	type_rhs =
-		prefix_unary_expression;
-
-	prefix_unary_expression =
-		prefix_unary_operation* postfix_unary_expression;
-
-	prefix_unary_operation =
-		{neg} minus |
-		{pos} plus |
-		{not} not;
-
-	postfix_unary_expression =
-		atomic_expression postfix_unary_operation*;
-
-	postfix_unary_operation =
-		array_access;
-
-	array_access =
-		l_brk expressions r_brk;
-
-	expressions =
-		{single} expression |
-		{multiple} expressions comma expression;
-
-	atomic_expression =
-		{expr} l_par expression r_par |
-		{literal} literal_constant |
-		{if} if_expr |
-		{loop} loop |
-		{identifier} simple_name;
+	unary_op =
+		{not} not |
+		{plus} plus |
+		{minus} minus;
 
 	literal_constant =
 		{bool} boolean_literal |
 		{integer} integer_literal;
-
-	if_expr =
-		if l_par expression r_par control_structure_body semi? else_control_structure_body?;
-
-	else_control_structure_body =
-		else control_structure_body;
-
-	control_structure_body =
-		{block} block;
-		//{block_level_expr} block_level_expression;
-
-	loop =
-		while_expr;
-
-	while_expr =
-		while l_par expression r_par control_structure_body;
