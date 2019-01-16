@@ -1,37 +1,155 @@
 Package kotlin;
 
 Helpers
-	letter	= [['a' .. 'z'] + ['A' .. 'Z']];
-	digit	= ['0' .. '9'];
-	lf  	= 10;
-	cr  	= 13;
-	sp		= ' ';
 
-	line_terminator = lf | cr | cr lf;
+	non_zero_digit		=	['1' .. '9'];
+	digit				=	'0' | non_zero_digit;
+	digits				=	digit+;
+
+	letter				=	[['a' .. 'z']+['A'..'Z']];
+	java_letter			=	letter | '$' | '_';
+	java_letter_or_digit =	letter | digit | '$' | '_';
 
 Tokens
-	// keywords
-	fun	= 'fun';
 
-	// separators
-	l_brc = '{';
-	l_par = '(';
-	r_brc = '}';
-	r_par = ')';
-	col = ':';
+	identifier			=	java_letter java_letter_or_digit*;
 
-	// operators
-	gt = '>';
-	lt = '<';
+	integer				=	'0'
+						|	non_zero_digit digits?
+						;
 
-	// identifier
-	id = letter (letter|digit)*;
+	boolean				=	'true'
+	 					|	'false'
+						;
 
-	// white spaces
-	white_space = (sp | line_terminator)*;
+	not					= '!';
+	plus				= '+';
+	minus				= '-';
+	star				= '*';
+	slash				= '/';
+	percent				= '%';
+	leq					= '<=';
+	geq					= '>=';
+	lt					= '<';
+	gt					= '>';
+	equals				= '==';
+	not_equals			= '!=';
+	ampamp				= '&&';
+	oror				= '||';
+	l_par				= '(';
+	r_par				= ')';
+	l_brc				= '{';
+	r_brc				= '}';
+	semi				= ';';
+	assign				= '=';
 
-Ignored Tokens
-	white_space;
+	kw_while			= 'while';
+	kw_if				= 'if';
+	kw_else				= 'else';
+
+	pkw_println			= 'println';
+
 
 Productions
-     function = fun [fun_name]: id l_par [var_name]: id col [var_type]: id lt [var_param]: id gt r_par l_brc r_brc;
+
+	stmt						=	{loop} while {-> while.stmt}
+								|	{print} print {-> print.stmt}
+								;
+
+	open {-> stmt}				=	{short} kw_if l_par expr r_par stmt
+//								|	{verbose} kw_if l_par expr r_par matched kw_else open
+								;
+
+	assignment {-> stmt}		=	identifier assign expr semi {-> New stmt.assign(identifier, expr)}
+								;
+
+	print {-> stmt}				=	pkw_println l_par expr r_par semi {-> New stmt.print(expr)}
+								;
+
+	while {-> stmt}				=	kw_while l_par expr r_par block {-> New stmt.while(expr, [block.stmt])}
+								;
+
+	block {-> stmt*}			=	l_brc stmt* r_brc {-> [stmt] }
+								;
+
+	expr						=	or {-> or.expr}
+								;
+
+	or {-> expr}				=	{and} and {-> and.expr}
+								|	{or} or oror and {-> New expr.binary(or.expr, New binop.or(), and.expr)}
+								;
+
+	and {-> expr}				=	{eq} eq {-> eq.expr}
+								|	{and} and ampamp eq {-> New expr.binary(and.expr, New binop.and(), eq.expr)}
+								;
+
+	eq {-> expr}					=	{rel} rel {-> rel.expr}
+								|	{eq} eq equals rel {-> New expr.binary(P.eq.expr, New binop.equals(), rel.expr)}
+								|	{neq} eq not_equals rel {-> New expr.binary(P.eq.expr, New binop.not_equals(), rel.expr)}
+								;
+
+	rel {-> expr}				=	{add} add {-> add.expr}
+								|	{lt} rel lt add {-> New expr.binary(rel.expr, New binop.lt(), add.expr)}
+								|	{gt} rel gt add {-> New expr.binary(rel.expr, New binop.gt(), add.expr)}
+								|	{leq} rel leq add {-> New expr.binary(rel.expr, New binop.leq(), add.expr)}
+								|	{geq} rel geq add {-> New expr.binary(rel.expr, New binop.geq(), add.expr)}
+								;
+
+	add {-> expr}				=	{mult} mult {-> mult.expr}
+								|	{plus} add plus mult {-> New expr.binary(add.expr, New binop.plus(), mult.expr)}
+								|	{minus} add minus mult {-> New expr.binary(add.expr, New binop.minus(), mult.expr)}
+								;
+
+	mult {-> expr}				=	{unary} unary {-> unary.expr}
+								|	{mult} mult star unary {-> New expr.binary(mult.expr, New binop.mul(), unary.expr)}
+								|	{div} mult slash unary {-> New expr.binary(mult.expr, New binop.div(), unary.expr)}
+								|	{mod} mult percent unary {-> New expr.binary(mult.expr, New binop.mod(), unary.expr)}
+								;
+
+	unary {-> expr}				=	{atomic} atomic {-> atomic.expr}
+								|	{not} not unary {-> New expr.unary(New unop.not(), unary.expr)}
+								|	{plus} plus unary {-> New expr.unary(New unop.plus(), unary.expr)}
+								|	{minus} minus unary {-> New expr.unary(New unop.minus(), unary.expr)}
+								;
+
+	atomic {-> expr}			=	{id} identifier {-> New expr.variable(identifier)}
+								|	{lit} constant {-> constant.expr}
+								;
+
+	constant {-> expr}			=	{int} integer {-> New expr.integer_literal(integer)}
+								|	{bool} boolean {-> New expr.boolean_literal(boolean)}
+								;
+
+Abstract Syntax Tree
+
+	stmt		=	{while} [condition]:expr [block]:stmt*
+				|	{print} [message]:expr
+				|	{assign} [var]:identifier [expr]:expr
+				;
+
+	expr		=	{variable} identifier
+  				|	{integer_literal} integer
+		  		|	{boolean_literal} boolean
+		  		|	{unary} [op]:unop [r]:expr
+		  		|	{binary} [l]:expr [op]:binop [r]:expr
+		  		;
+
+	unop		=	{not}
+				|	{plus}
+				|	{minus}
+				;
+
+	binop		=	{mul}
+				|	{div}
+				|	{mod}
+				|	{plus}
+				|	{minus}
+				|	{lt}
+				|	{gt}
+				|	{leq}
+				|	{geq}
+				|	{equals}
+				|	{not_equals}
+				|	{and}
+				|	{or}
+				;
