@@ -26,12 +26,16 @@ Tokens
 	// keywords
 	var = 'var';
 	fun = 'fun';
+	while = 'while';
+	if = 'if';
+	else = 'else';
 
-	// pseudo keywords from preamble
+	// pseudo keywords
 	main = 'main';
 	args = 'args';
 	string = 'String';
 	array = 'Array';
+	println = 'println';
 
 	l_par = '(';
 	r_par = ')';
@@ -74,13 +78,35 @@ Ignored Tokens
 
 Productions
 	start =
-		fun main l_par args colon array lt string gt r_par l_brc r_brc;
-
-	assignment =
-		identifier assign or_expression semi;
+		fun main l_par args colon array lt string gt r_par l_brc var_declaration* statement* r_brc;
 
 	var_declaration =
 		var identifier colon type assign or_expression semi;
+
+	statement =
+		{matched} matched_statement |
+		{open} open_statement;
+
+	matched_statement =
+		{if} if l_par or_expression r_par matched_statement else [else_part]:matched_statement |
+		// other
+		{assign} assignment_statement |
+        {println} output_statement |
+        {while} while_loop_statement |
+        {block} block;
+
+	open_statement =
+		{short} if l_par or_expression r_par statement |
+		{verbose} if l_par or_expression r_par matched_statement else open_statement;
+
+	assignment_statement =
+		identifier assign or_expression semi;
+
+	output_statement =
+		println l_par or_expression r_par semi;
+
+	while_loop_statement =
+		while l_par or_expression r_par block;
 
 	or_expression =
 		{and} and_expression |
@@ -107,8 +133,15 @@ Productions
 		{mult} mult_expression mult_op unary_expression;
 
 	unary_expression =
-		{plain} literal_constant |
+		{atomic} atomic_expression |
 		{unary} unary_op unary_expression;
+
+	atomic_expression =
+		{literal} literal_constant |
+		{identifier} identifier;
+
+	block =
+		l_brc statement* r_brc;
 
 	eq_op =
 		{neq} neq |
