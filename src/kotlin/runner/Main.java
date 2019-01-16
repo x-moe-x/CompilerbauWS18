@@ -1,6 +1,6 @@
 package kotlin.runner;
 
-import kotlin.interpreter.Interpreter;
+import kotlin.semantic.SemanticAnalyzer;
 import kotlin.lexer.Lexer;
 import kotlin.node.Start;
 import kotlin.parser.Parser;
@@ -15,8 +15,8 @@ public class Main {
 				Lexer lexer = new Lexer(new PushbackReader(new FileReader(args[0]), 1024));
 				Parser parser = new Parser(lexer);
 				Start ast = parser.parse();
-				Interpreter interpreter = new Interpreter();
-				ast.apply(interpreter);
+				SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer();
+				ast.apply(semanticAnalyzer);
 			} catch (Exception e) {
 				System.out.println(e);
 			}
