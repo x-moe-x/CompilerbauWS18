@@ -7,6 +7,10 @@ Helpers
 	cr					= 0x0d;
 
 	line_terminator		= lf | cr | cr lf;
+	all					= [0..0xffff];
+	input_character		= [all - [cr + lf]];
+	not_star			=    [input_character - '*'] | line_terminator;
+	not_star_not_slash	= [input_character - ['*' + '/']] | line_terminator;
 
 	letter				=	[['a' .. 'z']+['A'..'Z']];
 	non_zero_digit		=	['1' .. '9'];
@@ -65,10 +69,14 @@ Tokens
 	assign				= '=';
 	colon				= ':';
 
-	white_space = (sp | tab | line_terminator)*;
+	white_space			= (sp | tab | line_terminator)*;
+	traditional_comment	= '/*' not_star+ '*'+ (not_star_not_slash not_star* '*'+)* '/';
+	end_of_line_comment	= '//' input_character* line_terminator?;
 
 Ignored Tokens
-	white_space;
+	white_space,
+	traditional_comment,
+	end_of_line_comment;
 
 Productions
 
