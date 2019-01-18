@@ -1,26 +1,47 @@
 Package kotlin;
 
 Helpers
+	tab					= 0x09;
+	lf					= 0x0a;
+	sp					= ' ';
+	cr					= 0x0d;
 
-	non_zero_digit		=	['1' .. '9'];
-	digit				=	'0' | non_zero_digit;
-	digits				=	digit+;
+	line_terminator		= lf | cr | cr lf;
 
 	letter				=	[['a' .. 'z']+['A'..'Z']];
+	non_zero_digit		=	['1' .. '9'];
+	digit				=	'0' | non_zero_digit;
+
 	java_letter			=	letter | '$' | '_';
 	java_letter_or_digit =	letter | digit | '$' | '_';
 
 Tokens
+	// keywords
+	kw_fun				= 'fun';
+	kw_while			= 'while';
+	kw_if				= 'if';
+	kw_else				= 'else';
+	kw_var				= 'var';
+	kw_int				= 'Int';
+	kw_bool				= 'Boolean';
 
-	identifier			=	java_letter java_letter_or_digit*;
+	// pseudo keywords
+	pkw_println			= 'println';
+	pkw_main			= 'main';
+	pkw_args			= 'args';
+	pkw_array			= 'Array';
+	pkw_string			= 'String';
 
 	integer				=	'0'
-						|	non_zero_digit digits?
+						|	non_zero_digit digit*
 						;
 
 	boolean				=	'true'
 	 					|	'false'
 						;
+
+	identifier			=	java_letter java_letter_or_digit*;
+
 
 	not					= '!';
 	plus				= '+';
@@ -42,22 +63,39 @@ Tokens
 	r_brc				= '}';
 	semi				= ';';
 	assign				= '=';
+	colon				= ':';
 
-	kw_while			= 'while';
-	kw_if				= 'if';
-	kw_else				= 'else';
+	white_space = (sp | tab | line_terminator)*;
 
-	pkw_println			= 'println';
-
+Ignored Tokens
+	white_space;
 
 Productions
 
-	stmt						=	{loop} while {-> while.stmt}
-								|	{print} print {-> print.stmt}
+	function					=	kw_fun pkw_main l_par pkw_args colon pkw_array lt pkw_string gt r_par l_brc declaration* stmt* r_brc
+										{-> New function([declaration.stmt],[stmt])}
 								;
 
-	open {-> stmt}				=	{short} kw_if l_par expr r_par stmt
-//								|	{verbose} kw_if l_par expr r_par matched kw_else open
+	declaration {-> stmt}		=	{int} kw_var identifier colon kw_int assign expr semi
+											{-> New stmt.declaration(identifier, New type.int(), expr)}
+								|	{bool} kw_var identifier colon kw_bool assign expr semi
+											{-> New stmt.declaration(identifier, New type.bool(), expr)}
+								;
+
+	stmt						=	{matched} matched {-> matched.stmt}
+								|	{open} open {-> open.stmt}
+								;
+
+	open {-> stmt}				=	{if} kw_if l_par expr r_par stmt {-> New stmt.if(expr, [stmt], [])}
+								|	{if_else} kw_if l_par expr r_par matched kw_else open {-> New stmt.if(expr, [matched.stmt], [open.stmt])}
+								;
+
+	matched {-> stmt}			=	{if_else} kw_if l_par expr r_par [true_block]:matched kw_else [false_block]:matched {-> New stmt.if(expr, [true_block.stmt], [false_block.stmt])}
+									// other:
+								|	{loop} while {-> while.stmt}
+								|	{print} print {-> print.stmt}
+								|	{assing} assignment {-> assignment.stmt}
+								|	{block} block {-> New stmt.block([block.stmt])}
 								;
 
 	assignment {-> stmt}		=	identifier assign expr semi {-> New stmt.assign(identifier, expr)}
@@ -122,9 +160,15 @@ Productions
 
 Abstract Syntax Tree
 
-	stmt		=	{while} [condition]:expr [block]:stmt*
+	function	=	[declarations]:stmt* [statements]:stmt*
+				;
+
+	stmt		=	{while} [condition]:expr [statements]:stmt*
 				|	{print} [message]:expr
 				|	{assign} [var]:identifier [expr]:expr
+				|	{if} [condition]:expr [true_statements]:stmt* [false_statements]:stmt*
+				|	{block} [statements]:stmt*
+				|	{declaration} [var]:identifier [type]:type [expr]:expr
 				;
 
 	expr		=	{variable} identifier
@@ -133,6 +177,10 @@ Abstract Syntax Tree
 		  		|	{unary} [op]:unop [r]:expr
 		  		|	{binary} [l]:expr [op]:binop [r]:expr
 		  		;
+
+	type		=	{int}
+				|	{bool}
+				;
 
 	unop		=	{not}
 				|	{plus}
