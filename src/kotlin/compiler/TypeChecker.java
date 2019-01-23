@@ -1,4 +1,4 @@
-package kotlin.interpreter;
+package kotlin.compiler;
 
 import kotlin.analysis.DepthFirstAdapter;
 import kotlin.node.*;
@@ -6,17 +6,35 @@ import kotlin.node.*;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Interpreter extends DepthFirstAdapter {
-	enum Type {
+public class TypeChecker extends DepthFirstAdapter {
+	public boolean hasErrors() {
+		return hasErrors;
+	}
+
+	public enum Type {
 		Int, Bool;
 
 		static Type getType(PType type) {
 			return type instanceof ABoolType ? Bool : Int;
 		}
+
 	}
 
 	private Map<String, Type> symbolTable = new HashMap<>();
+	private Map<String, Integer> varNumbers = new HashMap<>();
 	private Map<PExpr, Type> expressionTypes = new HashMap<>();
+
+	private int varNr = 0;
+	private boolean hasErrors = false;
+
+	public Type getExprType(PExpr expr) {
+		return expressionTypes.get(expr);
+	}
+
+	public int getVarNr(TIdentifier identifier) {
+		String var = identifier.getText();
+		return varNumbers.get(var);
+	}
 
 	@Override
 	public void outADeclarationStmt(ADeclarationStmt node) {
@@ -34,7 +52,10 @@ public class Interpreter extends DepthFirstAdapter {
 		Type exprType = expressionTypes.get(node.getExpr());
 		if (exprType != type) {
 			setError(identifier, "Incompatible types, required " + type + ", found " + exprType);
+			return;
 		}
+
+		varNumbers.put(var, varNr++);
 	}
 
 	@Override
@@ -51,6 +72,7 @@ public class Interpreter extends DepthFirstAdapter {
 		Type exprType = expressionTypes.get(node.getExpr());
 		if (exprType != type) {
 			setError(identifier, "Incompatible types, required " + type + ", found " + exprType);
+			return;
 		}
 	}
 
@@ -59,6 +81,7 @@ public class Interpreter extends DepthFirstAdapter {
 		Type conditionType = expressionTypes.get(node.getCondition());
 		if (conditionType != Type.Bool) {
 			setError(null, "Incompatible types, required Bool, found " + conditionType);
+			return;
 		}
 	}
 
@@ -67,6 +90,7 @@ public class Interpreter extends DepthFirstAdapter {
 		Type conditionType = expressionTypes.get(node.getCondition());
 		if (conditionType != Type.Bool) {
 			setError(null, "Incompatible types, required Bool, found " + conditionType);
+			return;
 		}
 	}
 
@@ -164,5 +188,6 @@ public class Interpreter extends DepthFirstAdapter {
 		} else {
 			System.err.println("Error " + message);
 		}
+		hasErrors = true;
 	}
 }
