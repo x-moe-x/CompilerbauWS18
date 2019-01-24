@@ -20,7 +20,7 @@ public class StupsCompiler {
 				ast.apply(typeChecker);
 
 				if (!typeChecker.hasErrors()) {
-					CodeGenerator generator = new CodeGenerator(typeChecker);
+					CodeGenerator generator = new CodeGenerator(typeChecker, extractModuleName(args[1]));
 					ast.apply(generator);
 
 					System.out.println(generator.toString());
@@ -34,5 +34,10 @@ public class StupsCompiler {
 		} else {
 			System.exit(1);
 		}
+	}
+
+	private static String extractModuleName(String arg) {
+		// TODO do this right
+		return "Test";
 	}
 }

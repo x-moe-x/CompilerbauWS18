@@ -11,6 +11,10 @@ public class TypeChecker extends DepthFirstAdapter {
 		return hasErrors;
 	}
 
+	int getNrOfVars() {
+		return varNumbers.size();
+	}
+
 	public enum Type {
 		Int, Bool;
 
@@ -27,11 +31,7 @@ public class TypeChecker extends DepthFirstAdapter {
 	private int varNr = 0;
 	private boolean hasErrors = false;
 
-	public Type getExprType(PExpr expr) {
-		return expressionTypes.get(expr);
-	}
-
-	public int getVarNr(TIdentifier identifier) {
+	int getVarNr(TIdentifier identifier) {
 		String var = identifier.getText();
 		return varNumbers.get(var);
 	}

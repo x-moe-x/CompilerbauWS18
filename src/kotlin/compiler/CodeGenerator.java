@@ -7,19 +7,20 @@ import java.util.LinkedList;
 
 public class CodeGenerator extends DepthFirstAdapter {
 	private final TypeChecker checker;
+	private final String moduleName;
+
 	private int labelNr = 0;
+	private int maxStack = 0;
 	private final CodeWriter writer = new CodeWriter();
 
 	enum Binop {
-		mul("imul", false), div("idiv", false), mod("irem", false), plus("iadd", false), minus("isub", false),
-		lt("iflt", true), gt("ifgt", true), leq("ifgt", true), geq("ifgt", true), equals("ifgt", true), not_equals("ifgt", true), and("ifgt", true), or("ifgt", true);
+		mul("imul"), div("idiv"), mod("irem"), plus("iadd"), minus("isub"),
+		lt("if_icmplt"), gt("if_icmpgt"), leq("if_icmpgt"), geq("if_icmpgt"), equals("if_icmpgt"), not_equals("if_icmpgt"), and("if_icmpgt"), or("if_icmpgt");
 
 		private final String code;
-		private final boolean isComparison;
 
-		Binop(String code, boolean isComparison) {
+		Binop(String code) {
 			this.code = code;
-			this.isComparison = isComparison;
 		}
 
 		static Binop getOp(PBinop binop) {
@@ -56,70 +57,121 @@ public class CodeGenerator extends DepthFirstAdapter {
 			return code;
 		}
 
-		public boolean isComparison() {
-			return isComparison;
-		}
 	}
 
-	public CodeGenerator(TypeChecker checker) {
+	public CodeGenerator(TypeChecker checker, String moduleName) {
 		this.checker = checker;
+		this.moduleName = moduleName;
 	}
 
 	@Override
 	public void outAFunction(AFunction node) {
-		generateStatements(node.getDeclarations());
-		generateStatements(node.getStatements());
+		generateStatements(node.getDeclarations(), 0);
+		generateStatements(node.getStatements(), 0);
+		writer.prependBoilerplateInit(moduleName, maxStack, checker.getNrOfVars());
+		writer.writeBoilerplateExit();
 	}
 
-	private void generateStatements(LinkedList<PStmt> stmts) {
+	private void generateStatements(LinkedList<PStmt> stmts, int currentStack) {
 		for (PStmt stmt : stmts) {
-			generateStatement(stmt);
+			generateStatement(stmt, currentStack);
 		}
 	}
 
-	private void generateStatement(PStmt stmt) {
+	private void generateStatement(PStmt stmt, int currentStack) {
 		if (stmt instanceof ADeclarationStmt) {
-			generateDeclaration((ADeclarationStmt) stmt);
+			generateDeclaration((ADeclarationStmt) stmt, currentStack);
 		} else if (stmt instanceof AWhileStmt) {
-			generateWhile((AWhileStmt) stmt);
+			generateWhile((AWhileStmt) stmt, currentStack);
+		} else if (stmt instanceof AIfStmt) {
+			generateIf((AIfStmt) stmt, currentStack);
+		} else if (stmt instanceof AAssignStmt) {
+			generateAssign((AAssignStmt) stmt, currentStack);
+		} else if (stmt instanceof APrintStmt) {
+			generatePrint((APrintStmt) stmt, currentStack);
+		} else if (stmt instanceof ABlockStmt) {
+			generateBlock((ABlockStmt) stmt, currentStack);
 		} else {
 			System.err.println("not implemented for " + stmt.getClass().getSimpleName());
 		}
 	}
 
-	private void generateWhile(AWhileStmt stmt) {
+	private void generateBlock(ABlockStmt stmt, int currentStack) {
+		generateStatements(stmt.getStatements(), currentStack);
+	}
+
+	private void generatePrint(APrintStmt stmt, int currentStack) {
+		writer.writeOut();
+		generateExpr(stmt.getMessage(), currentStack);
+		writer.writePrintln();
+	}
+
+	private void generateAssign(AAssignStmt stmt, int currentStack) {
+		generateExpr(stmt.getExpr(), currentStack);
+		int varNr = checker.getVarNr(stmt.getVar());
+		writer.writeIStore(varNr);
+	}
+
+	private void generateIf(AIfStmt stmt, int currentStack) {
+		String L1 = "FalseBranch" + labelNr;
+		String L2 = "EndIf" + labelNr++;
+		generateExpr(stmt.getCondition(), currentStack);
+		writer.writeIfeq(L1);
+		generateStatements(stmt.getTrueStatements(), currentStack);
+		writer.writeGoto(L2);
+		writer.writeLabel(L1);
+		generateStatements(stmt.getFalseStatements(), currentStack);
+		writer.writeLabel(L2);
+	}
+
+	private void generateWhile(AWhileStmt stmt, int currentStack) {
 		String L1 = "StartWhile" + labelNr;
 		String L2 = "EndWhile" + labelNr++;
 		writer.writeLabel(L1);
-		generateExpr(stmt.getCondition());
+		generateExpr(stmt.getCondition(), currentStack);
 		writer.writeIfeq(L2);
-		generateStatements(stmt.getStatements());
+		generateStatements(stmt.getStatements(), 0);
 		writer.writeGoto(L1);
 		writer.writeLabel(L2);
 	}
 
 
-	private void generateDeclaration(ADeclarationStmt stmt) {
-		generateExpr(stmt.getExpr());
+	private void generateDeclaration(ADeclarationStmt stmt, int currentStack) {
+		generateExpr(stmt.getExpr(), currentStack);
 		writer.writeIStore(checker.getVarNr(stmt.getVar()));
+		updateMaxStack(currentStack + 1);
 	}
 
-	private void generateExpr(PExpr expr) {
+	private void updateMaxStack(int currentStack) {
+		if (currentStack > maxStack) {
+			maxStack = currentStack;
+		}
+	}
+
+	private void generateExpr(PExpr expr, int currentStack) {
 		if (expr instanceof AIntegerLiteralExpr) {
-			generateIntegerLiteral((AIntegerLiteralExpr) expr);
+			generateIntegerLiteral((AIntegerLiteralExpr) expr, currentStack);
 		} else if (expr instanceof ABooleanLiteralExpr) {
-			generateBooleanLiteral((ABooleanLiteralExpr) expr);
+			generateBooleanLiteral((ABooleanLiteralExpr) expr, currentStack);
 		} else if (expr instanceof ABinaryExpr) {
-			generateBinaryExpression((ABinaryExpr) expr);
+			generateBinaryExpression((ABinaryExpr) expr, currentStack);
+		} else if (expr instanceof AVariableExpr) {
+			generateVariableExpression((AVariableExpr) expr, currentStack);
 		} else {
 			System.err.println("not implemented for " + expr.getClass().getSimpleName());
 		}
 	}
 
-	private void generateBinaryExpression(ABinaryExpr expr) {
+	private void generateVariableExpression(AVariableExpr expr, int currentStack) {
+		int varNr = checker.getVarNr(expr.getIdentifier());
+		writer.writeILoad(varNr);
+		updateMaxStack(currentStack + 1);
+	}
+
+	private void generateBinaryExpression(ABinaryExpr expr, int currentStack) {
 		Binop op = Binop.getOp(expr.getOp());
-		generateExpr(expr.getL());
-		generateExpr(expr.getR());
+		generateExpr(expr.getL(), currentStack);
+		generateExpr(expr.getR(), currentStack);
 		switch (op) {
 			case mul:
 			case div:
@@ -146,17 +198,20 @@ public class CodeGenerator extends DepthFirstAdapter {
 				writer.writeLabel(labelDone);
 				break;
 		}
+		updateMaxStack(currentStack + 2);
 	}
 
-	private void generateBooleanLiteral(ABooleanLiteralExpr expr) {
+	private void generateBooleanLiteral(ABooleanLiteralExpr expr, int currentStack) {
 		boolean value = Boolean.parseBoolean(expr.getBoolean().getText());
 		writer.writeIPush(value ? 1 : 0);
+		updateMaxStack(currentStack + 1);
 	}
 
 
-	private void generateIntegerLiteral(AIntegerLiteralExpr expr) {
+	private void generateIntegerLiteral(AIntegerLiteralExpr expr, int currentStack) {
 		int value = Integer.parseInt(expr.getInteger().getText());
 		writer.writeIPush(value);
+		updateMaxStack(currentStack + 1);
 	}
 
 
