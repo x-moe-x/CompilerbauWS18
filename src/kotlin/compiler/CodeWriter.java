@@ -116,4 +116,8 @@ public class CodeWriter {
 		sb.append("\treturn\n");
 		sb.append(".end method\n");
 	}
+
+	public void writeNeg() {
+		sb.append("\tineg\n");
+	}
 }

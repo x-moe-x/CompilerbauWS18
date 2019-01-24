@@ -6,7 +6,9 @@ import kotlin.lexer.Lexer;
 import kotlin.node.Start;
 import kotlin.parser.Parser;
 
+import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.PushbackReader;
 
 public class StupsCompiler {
@@ -20,10 +22,14 @@ public class StupsCompiler {
 				ast.apply(typeChecker);
 
 				if (!typeChecker.hasErrors()) {
-					CodeGenerator generator = new CodeGenerator(typeChecker, extractModuleName(args[1]));
+					String moduleName = extractModuleName(args[1]);
+					String modulePath = extractModulePath(args[1]);
+					CodeGenerator generator = new CodeGenerator(typeChecker, moduleName);
 					ast.apply(generator);
 
-					System.out.println(generator.toString());
+					FileWriter fileWriter = new FileWriter(modulePath + "/" + moduleName + ".j");
+					fileWriter.write(generator.toString());
+					fileWriter.close();
 				}
 
 			} catch (Exception e) {
@@ -36,8 +42,15 @@ public class StupsCompiler {
 		}
 	}
 
-	private static String extractModuleName(String arg) {
-		// TODO do this right
-		return "Test";
+	private static String extractModulePath(String filename) {
+		File f = new File(filename);
+		String name = f.getName();
+		return f.getPath().replace(name, "");
+	}
+
+	private static String extractModuleName(String filename) {
+		File f = new File(filename);
+		String name = f.getName();
+		return name.replace(".kt", "");
 	}
 }

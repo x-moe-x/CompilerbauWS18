@@ -15,7 +15,7 @@ public class CodeGenerator extends DepthFirstAdapter {
 
 	enum Binop {
 		mul("imul"), div("idiv"), mod("irem"), plus("iadd"), minus("isub"),
-		lt("if_icmplt"), gt("if_icmpgt"), leq("if_icmpgt"), geq("if_icmpgt"), equals("if_icmpgt"), not_equals("if_icmpgt"), and("if_icmpgt"), or("if_icmpgt");
+		lt("if_icmplt"), gt("if_icmpgt"), leq("if_icmple"), geq("if_icmpge"), equals("if_icmpeq"), not_equals("if_icmpne"), and("iand"), or("ior");
 
 		private final String code;
 
@@ -59,6 +59,20 @@ public class CodeGenerator extends DepthFirstAdapter {
 
 	}
 
+	enum Unop {
+		not, plus, minus;
+
+		static Unop getOp(PUnop unop) {
+			if (unop instanceof ANotUnop) {
+				return not;
+			} else if (unop instanceof AMinusUnop) {
+				return minus;
+			} else {
+				return plus;
+			}
+		}
+	}
+
 	public CodeGenerator(TypeChecker checker, String moduleName) {
 		this.checker = checker;
 		this.moduleName = moduleName;
@@ -68,7 +82,7 @@ public class CodeGenerator extends DepthFirstAdapter {
 	public void outAFunction(AFunction node) {
 		generateStatements(node.getDeclarations(), 0);
 		generateStatements(node.getStatements(), 0);
-		writer.prependBoilerplateInit(moduleName, maxStack, checker.getNrOfVars());
+		writer.prependBoilerplateInit(moduleName, maxStack * 2, checker.getNrOfVars());
 		writer.writeBoilerplateExit();
 	}
 
@@ -157,8 +171,31 @@ public class CodeGenerator extends DepthFirstAdapter {
 			generateBinaryExpression((ABinaryExpr) expr, currentStack);
 		} else if (expr instanceof AVariableExpr) {
 			generateVariableExpression((AVariableExpr) expr, currentStack);
+		} else if (expr instanceof AUnaryExpr) {
+			generateUnaryExpression((AUnaryExpr) expr, currentStack);
 		} else {
 			System.err.println("not implemented for " + expr.getClass().getSimpleName());
+		}
+	}
+
+	private void generateUnaryExpression(AUnaryExpr expr, int currentStack) {
+		Unop op = Unop.getOp(expr.getOp());
+		generateExpr(expr.getR(), currentStack);
+		switch (op) {
+			case minus:
+				writer.writeNeg();
+				break;
+			case not:
+				String L1 = "FalseBranch" + labelNr;
+				String L2 = "EndIf" + labelNr++;
+				writer.writeIfeq(L1);
+				writer.writeBoolean(false);
+				writer.writeGoto(L2);
+				writer.writeLabel(L1);
+				writer.writeBoolean(true);
+				writer.writeLabel(L2);
+			case plus:
+				// nothing to do
 		}
 	}
 
